@@ -28,7 +28,7 @@ def parse_args():
         '--plot',
         help='plot the output image',
         action='store_true',
-        default=True
+        default=False
     )
     parser.add_argument(
         '-df',
