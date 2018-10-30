@@ -1,4 +1,4 @@
-from inpainter import Inpainter
+from main import Inpainter
 import argparse
 import matplotlib.pyplot as plt
 import cv2 as cv

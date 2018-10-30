@@ -103,7 +103,8 @@ class Inpainter():
 
         best_patch_range = None
         best_diff = float('inf')
-        lab_image = self.fill_image
+        lab_image = cv.cvtColor(self.fill_image,cv.COLOR_RGB2Lab)
+        # lab_image=np.copy(self.fill_image)
 
         for x in range(self.height-patch_height+1):
             for y in range(self.width-patch_width+1):
