@@ -3,6 +3,7 @@ import argparse
 import matplotlib.pyplot as plt
 import cv2 as cv
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -33,7 +34,7 @@ def parse_args():
     parser.add_argument(
         '-df',
         '--difference-algorithm',
-        help='The algorithm for calculating the difference between pictures.Available options are sq and sq_with_eucldean.',
+        help='The algorithm for calculating the difference between pictures.Available options are sq,sq_with_eucldean and sq_with_gradient.',
         default='sq'
     )
     parser.add_argument(
@@ -46,24 +47,26 @@ def parse_args():
     )
     return parser.parse_args()
 
+
 def main():
     args = parse_args()
-    image=cv.imread(args.input_image)
+    image = cv.imread(args.input_image)
     image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
-    mask= cv.imread(args.mask, 0)
-    output_image=Inpainter(
+    mask = cv.imread(args.mask, 0)
+    output_image = Inpainter(
         image=image,
         mask=mask,
         patch_size=args.patch_size,
         diff_algorithm=args.difference_algorithm,
         plot_progress=args.plot_progress
     ).inpaint()
-    plt.imsave(args.output,output_image)
+    plt.imsave(args.output, output_image)
     if args.plot:
         plt.clf()
         plt.imshow(output_image)
         plt.axis('off')
         plt.show()
+
 
 if __name__ == '__main__':
     main()

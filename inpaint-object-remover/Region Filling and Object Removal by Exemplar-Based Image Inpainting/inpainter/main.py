@@ -2,8 +2,9 @@ import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class Inpainter():
-    def __init__(self, image, mask, patch_size=9,diff_algorithm='sq',plot_progress=False):
+    def __init__(self, image, mask, patch_size=9, diff_algorithm='sq', plot_progress=False):
         self.image = image.astype('uint8')
         self.mask = mask.astype('uint8')
         # 进行光滑处理消除噪声
@@ -18,8 +19,8 @@ class Inpainter():
         self.width = self.mask.shape[1]
         self.total_fill_pixel = self.fill_range.sum()
 
-        self.diff_algorithm=diff_algorithm
-        self.plot_progress=plot_progress
+        self.diff_algorithm = diff_algorithm
+        self.plot_progress = plot_progress
         # 初始化成员变量
 
         # 边界矩阵
@@ -27,18 +28,26 @@ class Inpainter():
         self.D = None
         # 优先级
         self.priority = None
+        # 边界等照度线
+        self.isophote = None
+        # 目标点
+        self.target_point = None
+        # 灰度图片
+        self.gray_image = None
 
     def inpaint(self):
         while self.fill_range.sum() != 0:
             self._get_front()
-
+            self.gray_image = cv.cvtColor(
+                self.fill_image, cv.COLOR_RGB2GRAY).astype('float')/255
             self._log()
 
             if self.plot_progress:
                 self._plot_image()
-                
+
             self._update_priority()
             target_point = self._get_target_point()
+            self.target_point = target_point
             best_patch_range = self._get_best_patch_range(target_point)
             self._fill_image(target_point, best_patch_range)
 
@@ -94,8 +103,8 @@ class Inpainter():
 
     # 获取最佳匹配图片块的范围
     def _get_best_patch_range(self, template_point):
-        diff_method_name='_'+self.diff_algorithm+'_diff'
-        diff_method=getattr(self,diff_method_name)
+        diff_method_name = '_'+self.diff_algorithm+'_diff'
+        diff_method = getattr(self, diff_method_name)
 
         template_patch_range = self._get_patch_range(template_point)
         patch_height = template_patch_range[0][1]-template_patch_range[0][0]
@@ -103,7 +112,7 @@ class Inpainter():
 
         best_patch_range = None
         best_diff = float('inf')
-        lab_image = cv.cvtColor(self.fill_image,cv.COLOR_RGB2Lab)
+        lab_image = cv.cvtColor(self.fill_image, cv.COLOR_RGB2Lab)
         # lab_image=np.copy(self.fill_image)
 
         for x in range(self.height-patch_height+1):
@@ -132,20 +141,49 @@ class Inpainter():
 
         return ((template_patch-source_patch)**2).sum()
 
+    # 加入欧拉距离作为考量
     def _sq_with_eucldean_diff(self, img, template_patch_range, source_patch_range):
         sq_diff = self._sq_diff(img, template_patch_range, source_patch_range)
         eucldean_distance = np.sqrt((template_patch_range[0][0]-source_patch_range[0][0])**2 +
                                     (template_patch_range[1][0]-source_patch_range[1][0])**2)
         return sq_diff+eucldean_distance
 
+    def _sq_with_gradient_diff(self, img, template_patch_range, source_patch_range):
+        sq_diff = self._sq_diff(img, template_patch_range, source_patch_range)
+        target_isophote = np.copy(
+            self.isophote[self.target_point[0], self.target_point[1]])
+        target_isophote_val = np.sqrt(
+            target_isophote[0]**2+target_isophote[1]**2)
+        gray_source_patch = self._patch_data(self.gray_image, source_patch_range)
+        source_patch_gradient = np.nan_to_num(np.gradient(gray_source_patch))
+        source_patch_val = np.sqrt(
+            source_patch_gradient[0]**2+source_patch_gradient[1]**2)
+        patch_max_pos = np.unravel_index(
+            source_patch_val.argmax(),
+            source_patch_val.shape
+        )
+        source_isophote = np.array([-source_patch_gradient[1, patch_max_pos[0], patch_max_pos[1]],
+                                    source_patch_gradient[0, patch_max_pos[0], patch_max_pos[1]]])
+        source_isophote_val = source_patch_val.max()
+
+        # 计算两者之间的cos(theta)
+        dot_product = abs(
+            source_isophote[0]*target_isophote[0]+source_isophote[1] * target_isophote[1])
+        norm = source_isophote_val*target_isophote_val
+        cos_theta = 0
+        if norm != 0:
+            cos_theta = dot_product/norm
+        val_diff = abs(source_isophote_val-target_isophote_val)
+        return sq_diff-cos_theta+val_diff
+
     # 获取目标点的位置
+
     def _get_target_point(self):
         return np.unravel_index(self.priority.argmax(), self.priority.shape)
 
     # 使用Laplace算子求边界
     def _get_front(self):
         self.front = (cv.Laplacian(self.fill_range, -1) > 0).astype('uint8')
-        self._update_priority()
 
     def _update_priority(self):
         self._update_front_confidence()
@@ -156,6 +194,7 @@ class Inpainter():
     def _update_D(self):
         normal = self._get_normal()
         isophote = self._get_isophote()
+        self.isophote = isophote
         self.D = abs(normal[:, :, 0]*isophote[:, :, 0]**2 +
                      normal[:, :, 1]*isophote[:, :, 1]**2)+0.001
     # 更新边界点的信誉度
@@ -186,8 +225,7 @@ class Inpainter():
 
     # 获取patch周围的等照度线
     def _get_isophote(self):
-        gray_image = cv.cvtColor(
-            self.fill_image, cv.COLOR_RGB2GRAY).astype('float')/255
+        gray_image = np.copy(self.gray_image)
         gray_image[self.fill_range == 1] = None
         gradient = np.nan_to_num(np.array(np.gradient(gray_image)))
         gradient_val = np.sqrt(gradient[0]**2 + gradient[1]**2)
