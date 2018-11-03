@@ -176,6 +176,12 @@ class Inpainter():
         val_diff = abs(source_isophote_val-target_isophote_val)
         return sq_diff-cos_theta+val_diff
 
+    def _sq_with_gradient_eucldean_diff(self,img,template_patch_range,source_patch_range):
+        sq_with_gradient=self._sq_with_gradient_diff(img,template_patch_range,source_patch_range)
+        eucldean_distance = np.sqrt((template_patch_range[0][0]-source_patch_range[0][0])**2 +
+                                    (template_patch_range[1][0]-source_patch_range[1][0])**2)
+        return sq_with_gradient+eucldean_distance
+
     # 获取目标点的位置
 
     def _get_target_point(self):
