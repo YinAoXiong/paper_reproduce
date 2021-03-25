@@ -2,7 +2,7 @@
 
 [中文介绍](README.md) | [README](README_en.md)
 
-　　该目录为对论文《Region Filling and Object Removal by Exemplar-Based Image Inpainting》复现。具体实现代码可以参考inpainter/main.py中的源代码，论文内容解释以及实现过程见个人博客：[博客地址](https://blog.yinaoxiong.cn/2018/11/03/%E5%A4%8D%E7%8E%B0-Region-Filling-and-Object-Removal-by-Exemplar-Based-Image-Inpainting.html)
+　　该目录为对论文《Region Filling and Object Removal by Exemplar-Based Image Inpainting》复现。具体实现代码可以参考inpainter/main.py中的源代码，论文内容解释以及实现过程见个人博客：[博客地址](https://blog.yinaoxiong.cn/2018/11/03/%E5%A4%8D%E7%8E%B0%E3%80%8ARegion%20Filling%20and%20Object%20Removal%20by%20Exemplar-Based%20Image%20Inpainting%E3%80%8B.html)
 
 ## 环境准备
 
